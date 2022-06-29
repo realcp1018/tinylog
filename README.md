@@ -11,11 +11,15 @@ package main
 import "github.com/realcp1018/tinylog"
 
 func main() {
-    logger := tinylog.NewStreamLogger(tinylog.INFO) 
-    logger.Warn("warn msg")
+    StreamLogger := tinylog.NewStreamLogger(tinylog.INFO) 
+    StreamLogger.Warn("warn msg")
+    
+    fileLogger := tinylog.NewFileLogger("test.log", tinylog.INFO) 
+    fileLogger.Warn("warn msg")
+    
 }
 ```
-Output:
+Screen & test.log output :
 
 `
 2022/06/29 12:46:09.759870 [Warn] [main.go:7] warn msg
