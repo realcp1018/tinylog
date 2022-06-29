@@ -1,10 +1,22 @@
-A tiny log based on go stdlib log:
+A tiny log based on go stdlib log.
+
 ```
-logger := NewStreamLogger(INFO)
-logger.Info("this is [%s] msg.", "info")
+go get github.com/realcp1018/tinylog
+```
+Usage:
+
+```
+package main
+
+import "github.com/realcp1018/tinylog"
+
+func main() {
+    logger := tinylog.NewStreamLogger(tinylog.INFO) 
+    logger.Warn("warn msg")
+}
 ```
 Output:
 
 `
-2022/06/29 11:59:51.842839 [Info] [tinylog_test.go:8] This is [info] msg.
+2022/06/29 12:46:09.759870 [Warn] [main.go:7] warn msg
 `
