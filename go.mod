@@ -1,4 +1,4 @@
-module tinylog
+module github.com/realcp1018/tinylog
 
 go 1.16
 
