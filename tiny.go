@@ -58,7 +58,7 @@ func (l *TinyLogger) Debug(logStr string, v ...interface{}) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.logLevel == DEBUG {
-		l.SetPrefix(fmt.Sprintf("[Debug] "))
+		l.SetPrefix(fmt.Sprintf("[DEBUG] "))
 		_ = l.Output(2, fmt.Sprintf(logStr, v...))
 	}
 }
@@ -67,7 +67,7 @@ func (l *TinyLogger) Info(logStr string, v ...interface{}) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.logLevel <= INFO {
-		l.SetPrefix("[Info] ")
+		l.SetPrefix("[INFO] ")
 		_ = l.Output(2, fmt.Sprintf(logStr, v...))
 	}
 }
@@ -76,7 +76,7 @@ func (l *TinyLogger) Warn(logStr string, v ...interface{}) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.logLevel <= WARN {
-		l.SetPrefix( "[Warn] ")
+		l.SetPrefix( "[WARN] ")
 		_ = l.Output(2, fmt.Sprintf(logStr, v...))
 	}
 }
@@ -85,7 +85,7 @@ func (l *TinyLogger) Error(logStr string, v ...interface{}) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.logLevel <= ERROR {
-		l.SetPrefix("[Error] ")
+		l.SetPrefix("[ERROR] ")
 		_ = l.Output(2, fmt.Sprintf(logStr, v...))
 	}
 }
@@ -95,7 +95,7 @@ func (l *TinyLogger) Fatal(logStr string, v ...interface{}) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.logLevel <= FATAL {
-		l.SetPrefix("[Fatal] ")
+		l.SetPrefix("[FATAL] ")
 		_ = l.Output(2, fmt.Sprintf("%s [stacktrace]:\n%s", fmt.Sprintf(logStr, v...), string(debug.Stack())))
 		os.Exit(1)
 	}
