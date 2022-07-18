@@ -1,9 +1,11 @@
-A tiny log based on go stdlib log.
+## Introduction
+*tinylog*: logger based on golang built-in log
 
+**Download:**
 ```
 go get github.com/realcp1018/tinylog
 ```
-Usage:
+**Usage**:
 
 ```
 package main
