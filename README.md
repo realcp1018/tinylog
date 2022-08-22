@@ -26,3 +26,5 @@ Screen & test.log output :
 `
 2022/06/29 12:46:09.759870 [Warn] [main.go:7] warn msg
 `
+
+If you need structured log for ETL & visualization, use https://github.com/uber-go/zap 
