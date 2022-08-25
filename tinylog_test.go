@@ -1,6 +1,9 @@
 package tinylog
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func Test_tinylog(t *testing.T) {
 	logger := NewStreamLogger(INFO)
@@ -9,6 +12,5 @@ func Test_tinylog(t *testing.T) {
 	logger.Info("this is [%s] msg.", "info")
 	logger.Warn("this is [%s] msg!", "warn")
 	logger.Error("this is [%s] msg!", "error")
-	// fatal will print stacktrace and exit
-	logger.Fatal("this is [%s] msg!", "fatal")
+	fmt.Printf("%v %T %v\n", logger.Flags(), logger.Writer(), logger.Prefix())
 }

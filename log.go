@@ -15,7 +15,6 @@
 package tinylog
 
 import (
-	"fmt"
 	"io"
 	"os"
 	"runtime"
@@ -188,59 +187,6 @@ func (l *Logger) Output(calldepth int, s string) error {
 	return err
 }
 
-// Printf calls l.Output to print to the logger.
-// Arguments are handled in the manner of fmt.Printf.
-func (l *Logger) Printf(format string, v ...interface{}) {
-	l.Output(2, fmt.Sprintf(format, v...))
-}
-
-// Print calls l.Output to print to the logger.
-// Arguments are handled in the manner of fmt.Print.
-func (l *Logger) Print(v ...interface{}) { l.Output(2, fmt.Sprint(v...)) }
-
-// Println calls l.Output to print to the logger.
-// Arguments are handled in the manner of fmt.Println.
-func (l *Logger) Println(v ...interface{}) { l.Output(2, fmt.Sprintln(v...)) }
-
-// Fatal is equivalent to l.Print() followed by a call to os.Exit(1).
-func (l *Logger) Fatal(v ...interface{}) {
-	l.Output(2, fmt.Sprint(v...))
-	os.Exit(1)
-}
-
-// Fatalf is equivalent to l.Printf() followed by a call to os.Exit(1).
-func (l *Logger) Fatalf(format string, v ...interface{}) {
-	l.Output(2, fmt.Sprintf(format, v...))
-	os.Exit(1)
-}
-
-// Fatalln is equivalent to l.Println() followed by a call to os.Exit(1).
-func (l *Logger) Fatalln(v ...interface{}) {
-	l.Output(2, fmt.Sprintln(v...))
-	os.Exit(1)
-}
-
-// Panic is equivalent to l.Print() followed by a call to panic().
-func (l *Logger) Panic(v ...interface{}) {
-	s := fmt.Sprint(v...)
-	l.Output(2, s)
-	panic(s)
-}
-
-// Panicf is equivalent to l.Printf() followed by a call to panic().
-func (l *Logger) Panicf(format string, v ...interface{}) {
-	s := fmt.Sprintf(format, v...)
-	l.Output(2, s)
-	panic(s)
-}
-
-// Panicln is equivalent to l.Println() followed by a call to panic().
-func (l *Logger) Panicln(v ...interface{}) {
-	s := fmt.Sprintln(v...)
-	l.Output(2, s)
-	panic(s)
-}
-
 // Flags returns the output flags for the logger.
 // The flag bits are Ldate, Ltime, and so on.
 func (l *Logger) Flags() int {
@@ -310,65 +256,6 @@ func SetPrefix(prefix string) {
 // Writer returns the output destination for the standard logger.
 func Writer() io.Writer {
 	return std.Writer()
-}
-
-// These functions write to the standard logger.
-
-// Print calls Output to print to the standard logger.
-// Arguments are handled in the manner of fmt.Print.
-func Print(v ...interface{}) {
-	std.Output(2, fmt.Sprint(v...))
-}
-
-// Printf calls Output to print to the standard logger.
-// Arguments are handled in the manner of fmt.Printf.
-func Printf(format string, v ...interface{}) {
-	std.Output(2, fmt.Sprintf(format, v...))
-}
-
-// Println calls Output to print to the standard logger.
-// Arguments are handled in the manner of fmt.Println.
-func Println(v ...interface{}) {
-	std.Output(2, fmt.Sprintln(v...))
-}
-
-// Fatal is equivalent to Print() followed by a call to os.Exit(1).
-func Fatal(v ...interface{}) {
-	std.Output(2, fmt.Sprint(v...))
-	os.Exit(1)
-}
-
-// Fatalf is equivalent to Printf() followed by a call to os.Exit(1).
-func Fatalf(format string, v ...interface{}) {
-	std.Output(2, fmt.Sprintf(format, v...))
-	os.Exit(1)
-}
-
-// Fatalln is equivalent to Println() followed by a call to os.Exit(1).
-func Fatalln(v ...interface{}) {
-	std.Output(2, fmt.Sprintln(v...))
-	os.Exit(1)
-}
-
-// Panic is equivalent to Print() followed by a call to panic().
-func Panic(v ...interface{}) {
-	s := fmt.Sprint(v...)
-	std.Output(2, s)
-	panic(s)
-}
-
-// Panicf is equivalent to Printf() followed by a call to panic().
-func Panicf(format string, v ...interface{}) {
-	s := fmt.Sprintf(format, v...)
-	std.Output(2, s)
-	panic(s)
-}
-
-// Panicln is equivalent to Println() followed by a call to panic().
-func Panicln(v ...interface{}) {
-	s := fmt.Sprintln(v...)
-	std.Output(2, s)
-	panic(s)
 }
 
 // Output writes the output for a logging event. The string s contains
