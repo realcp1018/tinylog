@@ -80,6 +80,23 @@ func (l *TinyLogger) GetLevel() uint8 {
 	return l.logLevel
 }
 
+func (l *TinyLogger) GetLevelName() string {
+	switch l.logLevel {
+	case 0:
+		return "DEBUG"
+	case 1:
+		return "INFO"
+	case 2:
+		return "WARN"
+	case 3:
+		return "ERROR"
+	case 4:
+		return "FATAL"
+	default:
+		return ""
+	}
+}
+
 func (l *TinyLogger) Debug(format string, v ...interface{}) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
