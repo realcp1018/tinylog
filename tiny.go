@@ -76,7 +76,7 @@ func (l *TinyLogger) Warn(logStr string, v ...interface{}) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	if l.logLevel <= WARN {
-		l.SetPrefix( "[WARN] ")
+		l.SetPrefix("[WARN] ")
 		_ = l.Output(2, fmt.Sprintf(logStr, v...))
 	}
 }
@@ -86,7 +86,7 @@ func (l *TinyLogger) Error(logStr string, v ...interface{}) {
 	defer l.mu.Unlock()
 	if l.logLevel <= ERROR {
 		l.SetPrefix("[ERROR] ")
-		_ = l.Output(2, fmt.Sprintf(logStr, v...))
+		_ = l.Output(2, fmt.Sprintf("%s [stacktrace]:\n%s", fmt.Sprintf(logStr, v...), string(debug.Stack())))
 	}
 }
 
