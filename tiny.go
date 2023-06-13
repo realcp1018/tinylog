@@ -34,9 +34,9 @@ func NewFileLogger(fileName string, level uint8) *TinyLogger {
 	logger := new(Logger)
 	logger.SetOutput(&lumberjack.Logger{
 		Filename:   fileName,
-		MaxSize:    500,
-		MaxBackups: 30,
-		MaxAge:     7,
+		MaxSize:    512,
+		MaxBackups: 16,
+		MaxAge:     30,
 		Compress:   true,
 	})
 	logger.SetFlags(LstdFlags | Lmicroseconds | Lshortfile | Lmsgprefix)

@@ -16,9 +16,13 @@ func main() {
     StreamLogger := tinylog.NewStreamLogger(tinylog.INFO) 
     StreamLogger.Warn("warn msg")
     
-    fileLogger := tinylog.NewFileLogger("test.log", tinylog.INFO) 
+    fileLogger := tinylog.NewFileLogger("test.log", tinylog.INFO)
     fileLogger.Warn("warn msg")
     
+    // if you need some customized config: maxSizeMb, maxBackupCount, maxKeepDays
+    fileLogger := tinylog.NewFileLogger("test.log", tinylog.INFO)
+    fileLogger.SetFileConfig(128, 10, 7)
+    fileLogger.Warn("warn msg")
 }
 ```
 Screen & test.log output :
