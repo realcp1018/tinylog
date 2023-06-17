@@ -31,4 +31,6 @@ Screen & test.log output :
 2022/06/29 12:46:09.759870 [Warn] [main.go:7] warn msg
 `
 
+`Error()` and `Fatal()` will print stacktrace, `Fatal()` will do os.exit(1)
+
 If you need a faster structured log for ETL & visualization, use https://github.com/uber-go/zap 
