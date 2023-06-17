@@ -2,21 +2,14 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// Package log implements a simple logging package. It defines a type, Logger,
-// with methods for formatting output. It also has a predefined 'standard'
-// Logger accessible through helper functions Print[f|ln], Fatal[f|ln], and
-// Panic[f|ln], which are easier to use than creating a Logger manually.
-// That logger writes to standard error and prints the date and time
-// of each logged message.
-// Every log message is output on a separate line: if the message being
-// printed does not end in a newline, the logger will add one.
-// The Fatal functions call os.Exit(1) after writing the log message.
-// The Panic functions call panic after writing the log message.
+// Package log implements a simple logging package.
+// It defines a type logger, with methods for formatting output.
+// Every log message is output on a separate line: if the message being printed does not end in a newline,
+// the logger will add one.
 package tinylog
 
 import (
 	"io"
-	"os"
 	"runtime"
 	"sync"
 	"time"
@@ -44,11 +37,11 @@ const (
 	LstdFlags     = Ldate | Ltime // initial values for the standard logger
 )
 
-// A Logger represents an active logging object that generates lines of
+// A logger represents an active logging object that generates lines of
 // output to an io.Writer. Each logging operation makes a single call to
-// the Writer's Write method. A Logger can be used simultaneously from
+// the Writer's Write method. A logger can be used simultaneously from
 // multiple goroutines; it guarantees to serialize access to the Writer.
-type Logger struct {
+type logger struct {
 	mu     sync.Mutex // ensures atomic writes; protects the following fields
 	prefix string     // prefix on each line to identify the logger (but see Lmsgprefix)
 	flag   int        // properties
@@ -56,26 +49,12 @@ type Logger struct {
 	buf    []byte     // for accumulating text to write
 }
 
-// New creates a new Logger. The out variable sets the
-// destination to which log data will be written.
-// The prefix appears at the beginning of each generated log line, or
-// after the log header if the Lmsgprefix flag is provided.
-// The flag argument defines the logging properties.
-func New(out io.Writer, prefix string, flag int) *Logger {
-	return &Logger{out: out, prefix: prefix, flag: flag}
-}
-
-// SetOutput sets the output destination for the logger.
-func (l *Logger) SetOutput(w io.Writer) {
+// setOutput sets the output destination for the logger.
+func (l *logger) setOutput(w io.Writer) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.out = w
 }
-
-var std = New(os.Stderr, "", LstdFlags)
-
-// Default returns the standard logger used by the package-level output functions.
-func Default() *Logger { return std }
 
 // Cheap integer to fixed-width decimal ASCII. Give a negative width to avoid zero-padding.
 func itoa(buf *[]byte, i int, wid int) {
@@ -99,7 +78,7 @@ func itoa(buf *[]byte, i int, wid int) {
 //   * date and/or time (if corresponding flags are provided),
 //   * file and line number (if corresponding flags are provided),
 //   * l.prefix (if it's not blank and Lmsgprefix is set).
-func (l *Logger) formatHeader(buf *[]byte, t time.Time, file string, line int) {
+func (l *logger) formatHeader(buf *[]byte, t time.Time, file string, line int) {
 	if l.flag&Lmsgprefix == 0 {
 		*buf = append(*buf, l.prefix...)
 	}
@@ -154,13 +133,13 @@ func (l *Logger) formatHeader(buf *[]byte, t time.Time, file string, line int) {
 	}
 }
 
-// Output writes the output for a logging event. The string s contains
+// output writes the output for a logging event. The string s contains
 // the text to print after the prefix specified by the flags of the
 // Logger. A newline is appended if the last character of s is not
 // already a newline. Calldepth is used to recover the PC and is
 // provided for generality, although at the moment on all pre-defined
 // paths it will be 2.
-func (l *Logger) Output(calldepth int, s string) error {
+func (l *logger) output(calldepth int, s string) error {
 	now := time.Now() // get this early.
 	var file string
 	var line int
@@ -187,84 +166,24 @@ func (l *Logger) Output(calldepth int, s string) error {
 	return err
 }
 
-// Flags returns the output flags for the logger.
+// setFlags sets the output flags for the logger.
 // The flag bits are Ldate, Ltime, and so on.
-func (l *Logger) Flags() int {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	return l.flag
-}
-
-// SetFlags sets the output flags for the logger.
-// The flag bits are Ldate, Ltime, and so on.
-func (l *Logger) SetFlags(flag int) {
+func (l *logger) setFlags(flag int) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.flag = flag
 }
 
-// Prefix returns the output prefix for the logger.
-func (l *Logger) Prefix() string {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	return l.prefix
-}
-
-// SetPrefix sets the output prefix for the logger.
-func (l *Logger) SetPrefix(prefix string) {
+// setPrefix sets the output prefix for the logger.
+func (l *logger) setPrefix(prefix string) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	l.prefix = prefix
 }
 
-// Writer returns the output destination for the logger.
-func (l *Logger) Writer() io.Writer {
+// writer returns the output destination for the logger.
+func (l *logger) writer() io.Writer {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 	return l.out
-}
-
-// SetOutput sets the output destination for the standard logger.
-func SetOutput(w io.Writer) {
-	std.mu.Lock()
-	defer std.mu.Unlock()
-	std.out = w
-}
-
-// Flags returns the output flags for the standard logger.
-// The flag bits are Ldate, Ltime, and so on.
-func Flags() int {
-	return std.Flags()
-}
-
-// SetFlags sets the output flags for the standard logger.
-// The flag bits are Ldate, Ltime, and so on.
-func SetFlags(flag int) {
-	std.SetFlags(flag)
-}
-
-// Prefix returns the output prefix for the standard logger.
-func Prefix() string {
-	return std.Prefix()
-}
-
-// SetPrefix sets the output prefix for the standard logger.
-func SetPrefix(prefix string) {
-	std.SetPrefix(prefix)
-}
-
-// Writer returns the output destination for the standard logger.
-func Writer() io.Writer {
-	return std.Writer()
-}
-
-// Output writes the output for a logging event. The string s contains
-// the text to print after the prefix specified by the flags of the
-// Logger. A newline is appended if the last character of s is not
-// already a newline. Calldepth is the count of the number of
-// frames to skip when computing the file name and line number
-// if Llongfile or Lshortfile is set; a value of 1 will print the details
-// for the caller of Output.
-func Output(calldepth int, s string) error {
-	return std.Output(calldepth+1, s) // +1 for this frame.
 }

@@ -1,5 +1,5 @@
 ## Introduction
-*tinylog*: logger based on golang built-in log
+*tinylog*: a simple logger based on golang built-in log
 
 **Download:**
 ```
@@ -31,4 +31,4 @@ Screen & test.log output :
 2022/06/29 12:46:09.759870 [Warn] [main.go:7] warn msg
 `
 
-If you need structured log for ETL & visualization, use https://github.com/uber-go/zap 
+If you need a faster structured log for ETL & visualization, use https://github.com/uber-go/zap 
