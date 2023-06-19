@@ -129,6 +129,16 @@ func (l *TinyLogger) Error(format string, v ...interface{}) {
 	}
 }
 
+// ErrorNoStackTrace print error with no stacktrace
+func (l *TinyLogger) ErrorNoStackTrace(format string, v ...interface{}) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.logLevel <= ERROR {
+		l.setPrefix("[ERROR] ")
+		_ = l.output(2, fmt.Sprintf(format, v...))
+	}
+}
+
 // Fatal do exit
 func (l *TinyLogger) Fatal(format string, v ...interface{}) {
 	l.mu.Lock()
