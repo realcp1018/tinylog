@@ -154,8 +154,8 @@ func (l *TinyLogger) Fatal(format string, v ...interface{}) {
 func (l *TinyLogger) Print(v ...interface{}) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
-	if l.logLevel <= INFO {
-		l.setPrefix("[INFO] ")
+	if l.logLevel <= WARN {
+		l.setPrefix("[WARN] ")
 		var format string
 		for i := 0; i < len(v); i++ {
 			format += "%v "
@@ -165,7 +165,7 @@ func (l *TinyLogger) Print(v ...interface{}) {
 }
 
 func (l *TinyLogger) Printf(format string, v ...interface{}) {
-	l.Info(format, v...)
+	l.Warn(format, v...)
 }
 
 func (l *TinyLogger) Println(v ...interface{}) {
