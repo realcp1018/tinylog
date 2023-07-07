@@ -18,8 +18,8 @@ func Test_tinylog(t *testing.T) {
 	logger.Info("this is a %s log to file", "INFO")
 
 	// test default logger
-	log.Info("default log")
+	Info("default log")
 	// convert the default logger to a FileLogger
-	log.SetFileConfig("", 1, 1, 1)
-	log.Info("default log to tiny.log file")
+	SetFileConfig("", 1, 1, 1)
+	Info("default log to tiny.log file")
 }

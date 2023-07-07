@@ -23,9 +23,6 @@ const (
 	FATAL
 )
 
-// default logger
-var log = NewStreamLogger(INFO)
-
 type TinyLogger struct {
 	*logger             // go built-in logger
 	mu       sync.Mutex // mutex add for SetPrefix
