@@ -56,11 +56,11 @@ import "github.com/realcp1018/tinylog"
 
 ...
 // default logger default write to os.stdout 
-log.Info("default log")
+tinylog.Info("default log")
 
 // convert the default logger to a FileLogger
-log.SetFileConfig("mylog.log", 1, 1, 1)
-log.Info("default log to mylog.lo file")
+tinylog.SetFileConfig("mylog.log", 1, 1, 1)
+tinylog.Info("default log to mylog.lo file")
 ...
 ```
 Once you converted the default logger to a FileLogger, logs will write to logfile anywhere else in your project,
