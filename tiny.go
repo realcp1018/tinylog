@@ -23,6 +23,9 @@ const (
 	FATAL
 )
 
+// default logger
+var log = NewStreamLogger(INFO)
+
 type TinyLogger struct {
 	*logger             // go built-in logger
 	mu       sync.Mutex // mutex add for SetPrefix
@@ -57,19 +60,25 @@ func NewStreamLogger(level LogLevel) *TinyLogger {
 	}
 }
 
-func (l *TinyLogger) SetFileConfig(maxSizeMb, maxBackupCount, maxKeepDays int) {
-	switch l.writer().(type) {
-	case *lumberjack.Logger:
-		l.setOutput(&lumberjack.Logger{
-			Filename:   l.filename,
-			MaxSize:    maxSizeMb,
-			MaxBackups: maxBackupCount,
-			MaxAge:     maxKeepDays,
-			Compress:   true,
-		})
-	default:
-		return
+// SetFileConfig set file configs for FileLogger, or convert a StreamLogger to FileLogger
+func (l *TinyLogger) SetFileConfig(fileName string, maxSizeMb, maxBackupCount, maxKeepDays int) {
+	var newFileName string
+	if fileName == "" {
+		newFileName = l.filename
+	} else {
+		newFileName = fileName
 	}
+	// if fileName not given for StreamLogger, then set fileName to "tiny.log"
+	if newFileName == "" {
+		newFileName = "tiny.log"
+	}
+	l.setOutput(&lumberjack.Logger{
+		Filename:   newFileName,
+		MaxSize:    maxSizeMb,
+		MaxBackups: maxBackupCount,
+		MaxAge:     maxKeepDays,
+		Compress:   true,
+	})
 }
 
 func (l *TinyLogger) SetLevel(level LogLevel) {

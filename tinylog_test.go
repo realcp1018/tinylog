@@ -8,11 +8,18 @@ import (
 func Test_tinylog(t *testing.T) {
 	var logger *TinyLogger
 
+	// test StreamLogger
 	logger = NewStreamLogger(INFO)
-	logger.Info("this a %s log in stdout", "INFO")
+	logger.Info("this is a %s log to stdout", "INFO")
 	fmt.Println(logger.GetLevelName())
-
+	// test FileLogger
 	logger = NewFileLogger("111.log", INFO)
-	logger.SetFileConfig(1, 1, 1)
-	logger.Info("this a %s log in file", "INFO")
+	logger.SetFileConfig("", 1, 1, 1)
+	logger.Info("this is a %s log to file", "INFO")
+
+	// test default logger
+	log.Info("default log")
+	// convert the default logger to a FileLogger
+	log.SetFileConfig("", 1, 1, 1)
+	log.Info("default log to tiny.log file")
 }
