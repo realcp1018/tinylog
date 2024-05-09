@@ -1,7 +1,7 @@
 package tinylog
 
 // default logger
-var defaultLogger = NewStreamLogger(INFO)
+var defaultLogger = newDefaultLogger(INFO)
 
 func SetFileConfig(fileName string, maxSizeMb, maxBackupCount, maxKeepDays int) {
 	defaultLogger.SetFileConfig(fileName, maxSizeMb, maxBackupCount, maxKeepDays)

@@ -24,10 +24,11 @@ const (
 )
 
 type TinyLogger struct {
-	*logger             // go built-in logger
-	mu       sync.Mutex // mutex add for SetPrefix
-	logLevel LogLevel
-	filename string // in case to reconfig lumberjack.Logger, we store filename here
+	*logger              // go built-in logger
+	mu        sync.Mutex // mutex add for SetPrefix
+	logLevel  LogLevel
+	filename  string // in case to reconfig lumberjack.Logger, we store filename here
+	callDepth int
 }
 
 func NewFileLogger(fileName string, level LogLevel) *TinyLogger {
@@ -41,9 +42,10 @@ func NewFileLogger(fileName string, level LogLevel) *TinyLogger {
 	})
 	logger.setFlags(LstdFlags | Lmicroseconds | Lshortfile | Lmsgprefix)
 	return &TinyLogger{
-		logger:   logger,
-		logLevel: level,
-		filename: fileName,
+		logger:    logger,
+		logLevel:  level,
+		filename:  fileName,
+		callDepth: 2,
 	}
 }
 
@@ -52,8 +54,20 @@ func NewStreamLogger(level LogLevel) *TinyLogger {
 	logger.setOutput(os.Stdout)
 	logger.setFlags(LstdFlags | Lmicroseconds | Lmsgprefix | Lshortfile)
 	return &TinyLogger{
-		logger:   logger,
-		logLevel: level,
+		logger:    logger,
+		logLevel:  level,
+		callDepth: 2,
+	}
+}
+
+func newDefaultLogger(level LogLevel) *TinyLogger {
+	logger := new(logger)
+	logger.setOutput(os.Stdout)
+	logger.setFlags(LstdFlags | Lmicroseconds | Lmsgprefix | Lshortfile)
+	return &TinyLogger{
+		logger:    logger,
+		logLevel:  level,
+		callDepth: 3, // defaultLogger's log methods are wrapped by pkg functions, so callDepth+1
 	}
 }
 
@@ -104,7 +118,7 @@ func (l *TinyLogger) Debug(format string, v ...interface{}) {
 	defer l.mu.Unlock()
 	if l.logLevel == DEBUG {
 		l.setPrefix(fmt.Sprintf("[DEBUG] "))
-		_ = l.output(2, fmt.Sprintf(format, v...))
+		_ = l.output(l.callDepth, fmt.Sprintf(format, v...))
 	}
 }
 
@@ -113,7 +127,7 @@ func (l *TinyLogger) Info(format string, v ...interface{}) {
 	defer l.mu.Unlock()
 	if l.logLevel <= INFO {
 		l.setPrefix("[INFO] ")
-		_ = l.output(2, fmt.Sprintf(format, v...))
+		_ = l.output(l.callDepth, fmt.Sprintf(format, v...))
 	}
 }
 
@@ -122,7 +136,7 @@ func (l *TinyLogger) Warn(format string, v ...interface{}) {
 	defer l.mu.Unlock()
 	if l.logLevel <= WARN {
 		l.setPrefix("[WARN] ")
-		_ = l.output(2, fmt.Sprintf(format, v...))
+		_ = l.output(l.callDepth, fmt.Sprintf(format, v...))
 	}
 }
 
@@ -131,7 +145,7 @@ func (l *TinyLogger) Error(format string, v ...interface{}) {
 	defer l.mu.Unlock()
 	if l.logLevel <= ERROR {
 		l.setPrefix("[ERROR] ")
-		_ = l.output(2, fmt.Sprintf("%s\n[stacktrace]:\n%s", fmt.Sprintf(format, v...), string(debug.Stack())))
+		_ = l.output(l.callDepth, fmt.Sprintf("%s\n[stacktrace]:\n%s", fmt.Sprintf(format, v...), string(debug.Stack())))
 	}
 }
 
@@ -141,7 +155,7 @@ func (l *TinyLogger) ErrorNoStackTrace(format string, v ...interface{}) {
 	defer l.mu.Unlock()
 	if l.logLevel <= ERROR {
 		l.setPrefix("[ERROR] ")
-		_ = l.output(2, fmt.Sprintf(format, v...))
+		_ = l.output(l.callDepth, fmt.Sprintf(format, v...))
 	}
 }
 
@@ -151,7 +165,7 @@ func (l *TinyLogger) Fatal(format string, v ...interface{}) {
 	defer l.mu.Unlock()
 	if l.logLevel <= FATAL {
 		l.setPrefix("[FATAL] ")
-		_ = l.output(2, fmt.Sprintf("%s\n[stacktrace]:\n%s", fmt.Sprintf(format, v...), string(debug.Stack())))
+		_ = l.output(l.callDepth, fmt.Sprintf("%s\n[stacktrace]:\n%s", fmt.Sprintf(format, v...), string(debug.Stack())))
 		os.Exit(1)
 	}
 }
@@ -166,14 +180,28 @@ func (l *TinyLogger) Print(v ...interface{}) {
 		for i := 0; i < len(v); i++ {
 			format += "%v "
 		}
-		_ = l.output(2, fmt.Sprintf(strings.TrimSpace(format), v...))
+		_ = l.output(l.callDepth, fmt.Sprintf(strings.TrimSpace(format), v...))
 	}
 }
 
 func (l *TinyLogger) Printf(format string, v ...interface{}) {
-	l.Warn(format, v...)
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.logLevel <= WARN {
+		l.setPrefix("[WARN] ")
+		_ = l.output(l.callDepth, fmt.Sprintf(format, v...))
+	}
 }
 
 func (l *TinyLogger) Println(v ...interface{}) {
-	l.Print(v, "\n")
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.logLevel <= WARN {
+		l.setPrefix("[WARN] ")
+		var format string
+		for i := 0; i < len(v); i++ {
+			format += "%v "
+		}
+		_ = l.output(l.callDepth, fmt.Sprintf(strings.TrimSpace(format)+"\n", v...))
+	}
 }
