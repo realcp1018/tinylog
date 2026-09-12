@@ -73,6 +73,9 @@ func newDefaultLogger(level LogLevel) *TinyLogger {
 
 // SetFileConfig set file configs for FileLogger, or convert a StreamLogger to FileLogger
 func (l *TinyLogger) SetFileConfig(fileName string, maxSizeMb, maxBackupCount, maxKeepDays int) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+
 	var newFileName string
 	if fileName == "" {
 		newFileName = l.filename
@@ -90,6 +93,7 @@ func (l *TinyLogger) SetFileConfig(fileName string, maxSizeMb, maxBackupCount, m
 		MaxAge:     maxKeepDays,
 		Compress:   true,
 	})
+	l.filename = newFileName
 }
 
 func (l *TinyLogger) SetLevel(level LogLevel) {

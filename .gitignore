@@ -2,4 +2,5 @@
 *.un~
 *.pyc
 *.swp
+*.log
 go.sum
