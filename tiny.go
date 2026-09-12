@@ -75,6 +75,7 @@ func newDefaultLogger(level LogLevel) *TinyLogger {
 func (l *TinyLogger) SetFileConfig(fileName string, maxSizeMb, maxBackupCount, maxKeepDays int) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
+	oldWriter := l.writer()
 
 	var newFileName string
 	if fileName == "" {
@@ -86,14 +87,18 @@ func (l *TinyLogger) SetFileConfig(fileName string, maxSizeMb, maxBackupCount, m
 	if newFileName == "" {
 		newFileName = "tiny.log"
 	}
-	l.setOutput(&lumberjack.Logger{
+	newWriter := &lumberjack.Logger{
 		Filename:   newFileName,
 		MaxSize:    maxSizeMb,
 		MaxBackups: maxBackupCount,
 		MaxAge:     maxKeepDays,
 		Compress:   true,
-	})
+	}
+	l.setOutput(newWriter)
 	l.filename = newFileName
+	if oldFile, ok := oldWriter.(*lumberjack.Logger); ok {
+		_ = oldFile.Close()
+	}
 }
 
 func (l *TinyLogger) SetLevel(level LogLevel) {

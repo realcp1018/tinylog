@@ -3,6 +3,8 @@ package tinylog
 import (
 	"fmt"
 	"gopkg.in/natefinch/lumberjack.v2"
+	"os"
+	"path/filepath"
 	"testing"
 )
 
@@ -39,5 +41,29 @@ func TestTinyLoggerSetFileConfigUpdatesFilename(t *testing.T) {
 	}
 	if output.Filename != currentFile {
 		t.Fatalf("expected current log file %q, got %q", currentFile, output.Filename)
+	}
+}
+
+// TestTinyLoggerSetFileConfigClosesPreviousFile verifies that reconfiguration closes the old log file.
+func TestTinyLoggerSetFileConfigClosesPreviousFile(t *testing.T) {
+	logDir := t.TempDir()
+	oldFileName := filepath.Join(logDir, "old.log")
+	newFileName := filepath.Join(logDir, "new.log")
+	logger := NewFileLogger(oldFileName, INFO)
+	oldWriter, ok := logger.writer().(*lumberjack.Logger)
+	if !ok {
+		t.Fatalf("expected lumberjack output, got %T", logger.writer())
+	}
+	t.Cleanup(func() {
+		_ = oldWriter.Close()
+		if newWriter, ok := logger.writer().(*lumberjack.Logger); ok {
+			_ = newWriter.Close()
+		}
+	})
+
+	logger.Info("write to old file")
+	logger.SetFileConfig(newFileName, 1, 1, 1)
+	if err := os.Remove(oldFileName); err != nil {
+		t.Fatalf("expected old log file to be closed: %v", err)
 	}
 }
