@@ -1,30 +1,94 @@
 package tinylog
 
 import (
-	"fmt"
-	"gopkg.in/natefinch/lumberjack.v2"
+	"bytes"
+	"errors"
+	"io"
 	"os"
 	"path/filepath"
+	"strings"
+	"sync"
 	"testing"
+	"time"
+
+	"gopkg.in/natefinch/lumberjack.v2"
 )
 
-func Test_tinylog(t *testing.T) {
-	var logger *TinyLogger
+type failingWriter struct {
+	err error
+}
 
-	// test StreamLogger
-	logger = NewStreamLogger(INFO)
-	logger.Info("this is a %s log to stdout", "INFO")
-	fmt.Println(logger.GetLevelName())
-	// test FileLogger
-	logger = NewFileLogger("111.log", INFO)
-	logger.SetFileConfig("", 1, 1, 1)
-	logger.Info("this is a %s log to file", "INFO")
+// Write returns the configured error for testing failed log writes.
+func (w failingWriter) Write([]byte) (int, error) {
+	return 0, w.err
+}
 
-	// test default logger
-	Info("default log[default logger]")
-	// convert the default logger to a FileLogger
-	SetFileConfig("", 1, 1, 1)
-	Info("default log to tiny.log file[default logger]")
+// TestTinyLoggerLevelFiltering verifies that enabled levels are written and lower-priority levels are filtered.
+func TestTinyLoggerLevelFiltering(t *testing.T) {
+	var output bytes.Buffer
+	logger := NewStreamLogger(ERROR)
+	logger.setOutput(&output)
+
+	logger.Print("filtered print")
+	logger.Info("filtered info")
+	logger.ErrorNoStackTrace("visible error")
+
+	text := output.String()
+	if strings.Contains(text, "filtered") {
+		t.Fatalf("expected lower-priority logs to be filtered, got %q", text)
+	}
+	if !strings.Contains(text, "[ERROR]") || !strings.Contains(text, "visible error") {
+		t.Fatalf("expected error log to be written, got %q", text)
+	}
+	if !strings.Contains(text, "tinylog_test.go:") {
+		t.Fatalf("expected caller location in log, got %q", text)
+	}
+}
+
+// TestTinyLoggerConcurrentLevelAccess verifies that level reads and writes can run with logging concurrently.
+func TestTinyLoggerConcurrentLevelAccess(t *testing.T) {
+	logger := NewStreamLogger(INFO)
+	logger.setOutput(io.Discard)
+
+	var waitGroup sync.WaitGroup
+	for i := 0; i < 8; i++ {
+		waitGroup.Add(1)
+		go func() {
+			defer waitGroup.Done()
+			for j := 0; j < 100; j++ {
+				logger.SetLevel(LogLevel(j % 5))
+				_ = logger.GetLevelName()
+				logger.Info("concurrent log")
+			}
+		}()
+	}
+	waitGroup.Wait()
+}
+
+// TestTinyLoggerWriteErrorHandler verifies that failed writes are reported to the configured handler.
+func TestTinyLoggerWriteErrorHandler(t *testing.T) {
+	expectedError := errors.New("write failed")
+	logger := NewStreamLogger(INFO)
+	logger.setOutput(failingWriter{err: expectedError})
+	var reportedError error
+	logger.SetWriteErrorHandler(func(err error) {
+		reportedError = err
+		logger.SetLevel(WARN)
+	})
+
+	done := make(chan struct{})
+	go func() {
+		logger.Info("failed log")
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		t.Fatal("log write did not return")
+	}
+	if !errors.Is(reportedError, expectedError) {
+		t.Fatalf("expected write error %v, got %v", expectedError, reportedError)
+	}
 }
 
 // TestTinyLoggerSetFileConfigUpdatesFilename verifies that an empty filename keeps the latest configured path.
@@ -42,6 +106,9 @@ func TestTinyLoggerSetFileConfigUpdatesFilename(t *testing.T) {
 	if output.Filename != currentFile {
 		t.Fatalf("expected current log file %q, got %q", currentFile, output.Filename)
 	}
+	t.Cleanup(func() {
+		_ = output.Close()
+	})
 }
 
 // TestTinyLoggerSetFileConfigClosesPreviousFile verifies that reconfiguration closes the old log file.

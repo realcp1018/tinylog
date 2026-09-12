@@ -13,23 +13,22 @@ package main
 import "github.com/realcp1018/tinylog"
 
 func main() {
-    StreamLogger := tinylog.NewStreamLogger(tinylog.INFO) 
-    StreamLogger.Warn("warn msg")
-    
+    streamLogger := tinylog.NewStreamLogger(tinylog.INFO)
+    streamLogger.Warn("warn msg")
+
     fileLogger := tinylog.NewFileLogger("test.log", tinylog.INFO)
     fileLogger.Warn("warn msg")
-    
+
     // if you need some customized config: maxSizeMb, maxBackupCount, maxKeepDays
-    fileLogger := tinylog.NewFileLogger("test.log", tinylog.INFO)
     fileLogger.SetFileConfig("", 128, 10, 7)
     fileLogger.Warn("warn msg")
 }
 ```
 Screen & test.log output :
 
-`
-2022/06/29 12:46:09.759870 [Warn] [main.go:7] warn msg
-`
+```
+2022/06/29 12:46:09.759870 [WARN] [main.go:7] warn msg
+```
 
 `Error()` and `Fatal()` will print stacktrace, `Fatal()` will do os.exit(1).
 
@@ -60,11 +59,18 @@ tinylog.Info("default log")
 
 // convert the default logger to a FileLogger
 tinylog.SetFileConfig("mylog.log", 1, 1, 1)
-tinylog.Info("default log to mylog.lo file")
+tinylog.Info("default log to mylog.log file")
 ...
 ```
 Once you converted the default logger to a FileLogger, logs will write to logfile anywhere else in your project,
 because tinylog will only compile once.
+
+By default, tinylog reports log write errors to stderr. You can provide a custom handler:
+```go
+tinylog.SetWriteErrorHandler(func(err error) {
+    // send err to your monitoring system
+})
+```
 #### More:
 
-If you need a faster structured log for ETL & visualization, use https://github.com/uber-go/zap 
+If you need a faster structured log for ETL & visualization, use https://github.com/uber-go/zap

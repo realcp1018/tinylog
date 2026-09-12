@@ -7,6 +7,11 @@ func SetFileConfig(fileName string, maxSizeMb, maxBackupCount, maxKeepDays int) 
 	defaultLogger.SetFileConfig(fileName, maxSizeMb, maxBackupCount, maxKeepDays)
 }
 
+// SetWriteErrorHandler sets the default logger's callback for log write errors.
+func SetWriteErrorHandler(handler func(error)) {
+	defaultLogger.SetWriteErrorHandler(handler)
+}
+
 func SetLevel(level LogLevel) {
 	defaultLogger.SetLevel(level)
 }

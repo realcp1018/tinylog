@@ -24,11 +24,12 @@ const (
 )
 
 type TinyLogger struct {
-	*logger              // go built-in logger
-	mu        sync.Mutex // mutex add for SetPrefix
-	logLevel  LogLevel
-	filename  string // in case to reconfig lumberjack.Logger, we store filename here
-	callDepth int
+	*logger                 // go built-in logger
+	mu           sync.Mutex // mutex add for SetPrefix
+	logLevel     LogLevel
+	filename     string // in case to reconfig lumberjack.Logger, we store filename here
+	errorHandler func(error)
+	callDepth    int
 }
 
 func NewFileLogger(fileName string, level LogLevel) *TinyLogger {
@@ -42,10 +43,11 @@ func NewFileLogger(fileName string, level LogLevel) *TinyLogger {
 	})
 	logger.setFlags(LstdFlags | Lmicroseconds | Lshortfile | Lmsgprefix)
 	return &TinyLogger{
-		logger:    logger,
-		logLevel:  level,
-		filename:  fileName,
-		callDepth: 2,
+		logger:       logger,
+		logLevel:     level,
+		filename:     fileName,
+		errorHandler: reportWriteError,
+		callDepth:    2,
 	}
 }
 
@@ -54,9 +56,10 @@ func NewStreamLogger(level LogLevel) *TinyLogger {
 	logger.setOutput(os.Stdout)
 	logger.setFlags(LstdFlags | Lmicroseconds | Lmsgprefix | Lshortfile)
 	return &TinyLogger{
-		logger:    logger,
-		logLevel:  level,
-		callDepth: 2,
+		logger:       logger,
+		logLevel:     level,
+		errorHandler: reportWriteError,
+		callDepth:    2,
 	}
 }
 
@@ -65,9 +68,10 @@ func newDefaultLogger(level LogLevel) *TinyLogger {
 	logger.setOutput(os.Stdout)
 	logger.setFlags(LstdFlags | Lmicroseconds | Lmsgprefix | Lshortfile)
 	return &TinyLogger{
-		logger:    logger,
-		logLevel:  level,
-		callDepth: 3, // defaultLogger's log methods are wrapped by pkg functions, so callDepth+1
+		logger:       logger,
+		logLevel:     level,
+		errorHandler: reportWriteError,
+		callDepth:    3, // defaultLogger's log methods are wrapped by pkg functions, so callDepth+1
 	}
 }
 
@@ -101,11 +105,52 @@ func (l *TinyLogger) SetFileConfig(fileName string, maxSizeMb, maxBackupCount, m
 	}
 }
 
+// SetWriteErrorHandler sets the callback for log write errors. A nil handler restores the default stderr reporter.
+func (l *TinyLogger) SetWriteErrorHandler(handler func(error)) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if handler == nil {
+		l.errorHandler = reportWriteError
+		return
+	}
+	l.errorHandler = handler
+}
+
+// write writes a formatted message when the requested level is enabled.
+func (l *TinyLogger) write(level LogLevel, prefix, format string, v ...interface{}) (bool, error) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	if l.logLevel > level {
+		return false, nil
+	}
+	l.setPrefix(prefix)
+	return true, l.output(l.callDepth+1, fmt.Sprintf(format, v...))
+}
+
+// handleWriteError reports a failed log write without holding the logger lock.
+func (l *TinyLogger) handleWriteError(err error) {
+	if err == nil {
+		return
+	}
+	l.mu.Lock()
+	handler := l.errorHandler
+	l.mu.Unlock()
+	if handler == nil {
+		reportWriteError(err)
+		return
+	}
+	handler(err)
+}
+
 func (l *TinyLogger) SetLevel(level LogLevel) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	l.logLevel = level
 }
 
 func (l *TinyLogger) GetLevelName() string {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 	switch l.logLevel {
 	case 0:
 		return "DEBUG"
@@ -123,94 +168,65 @@ func (l *TinyLogger) GetLevelName() string {
 }
 
 func (l *TinyLogger) Debug(format string, v ...interface{}) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	if l.logLevel == DEBUG {
-		l.setPrefix(fmt.Sprintf("[DEBUG] "))
-		_ = l.output(l.callDepth, fmt.Sprintf(format, v...))
-	}
+	_, err := l.write(DEBUG, "[DEBUG] ", format, v...)
+	l.handleWriteError(err)
 }
 
 func (l *TinyLogger) Info(format string, v ...interface{}) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	if l.logLevel <= INFO {
-		l.setPrefix("[INFO] ")
-		_ = l.output(l.callDepth, fmt.Sprintf(format, v...))
-	}
+	_, err := l.write(INFO, "[INFO] ", format, v...)
+	l.handleWriteError(err)
 }
 
 func (l *TinyLogger) Warn(format string, v ...interface{}) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	if l.logLevel <= WARN {
-		l.setPrefix("[WARN] ")
-		_ = l.output(l.callDepth, fmt.Sprintf(format, v...))
-	}
+	_, err := l.write(WARN, "[WARN] ", format, v...)
+	l.handleWriteError(err)
 }
 
 func (l *TinyLogger) Error(format string, v ...interface{}) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	if l.logLevel <= ERROR {
-		l.setPrefix("[ERROR] ")
-		_ = l.output(l.callDepth, fmt.Sprintf("%s\n[stacktrace]:\n%s", fmt.Sprintf(format, v...), string(debug.Stack())))
-	}
+	_, err := l.write(ERROR, "[ERROR] ", "%s\n[stacktrace]:\n%s", fmt.Sprintf(format, v...), string(debug.Stack()))
+	l.handleWriteError(err)
 }
 
 // ErrorNoStackTrace print error with no stacktrace
 func (l *TinyLogger) ErrorNoStackTrace(format string, v ...interface{}) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	if l.logLevel <= ERROR {
-		l.setPrefix("[ERROR] ")
-		_ = l.output(l.callDepth, fmt.Sprintf(format, v...))
-	}
+	_, err := l.write(ERROR, "[ERROR] ", format, v...)
+	l.handleWriteError(err)
 }
 
 // Fatal do exit
 func (l *TinyLogger) Fatal(format string, v ...interface{}) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	if l.logLevel <= FATAL {
-		l.setPrefix("[FATAL] ")
-		_ = l.output(l.callDepth, fmt.Sprintf("%s\n[stacktrace]:\n%s", fmt.Sprintf(format, v...), string(debug.Stack())))
+	written, err := l.write(FATAL, "[FATAL] ", "%s\n[stacktrace]:\n%s", fmt.Sprintf(format, v...), string(debug.Stack()))
+	l.handleWriteError(err)
+	if written {
 		os.Exit(1)
 	}
 }
 
 // Add some common print functions(for interfaces)
 func (l *TinyLogger) Print(v ...interface{}) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	if l.logLevel <= WARN {
-		l.setPrefix("[WARN] ")
-		var format string
-		for i := 0; i < len(v); i++ {
-			format += "%v "
-		}
-		_ = l.output(l.callDepth, fmt.Sprintf(strings.TrimSpace(format), v...))
+	var format string
+	for i := 0; i < len(v); i++ {
+		format += "%v "
 	}
+	_, err := l.write(WARN, "[WARN] ", strings.TrimSpace(format), v...)
+	l.handleWriteError(err)
 }
 
 func (l *TinyLogger) Printf(format string, v ...interface{}) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	if l.logLevel <= WARN {
-		l.setPrefix("[WARN] ")
-		_ = l.output(l.callDepth, fmt.Sprintf(format, v...))
-	}
+	_, err := l.write(WARN, "[WARN] ", format, v...)
+	l.handleWriteError(err)
 }
 
 func (l *TinyLogger) Println(v ...interface{}) {
-	l.mu.Lock()
-	defer l.mu.Unlock()
-	if l.logLevel <= WARN {
-		l.setPrefix("[WARN] ")
-		var format string
-		for i := 0; i < len(v); i++ {
-			format += "%v "
-		}
-		_ = l.output(l.callDepth, fmt.Sprintf(strings.TrimSpace(format)+"\n", v...))
+	var format string
+	for i := 0; i < len(v); i++ {
+		format += "%v "
 	}
+	_, err := l.write(WARN, "[WARN] ", strings.TrimSpace(format)+"\n", v...)
+	l.handleWriteError(err)
+}
+
+// reportWriteError reports log write failures to stderr.
+func reportWriteError(err error) {
+	_, _ = fmt.Fprintf(os.Stderr, "tinylog: failed to write log: %v\n", err)
 }
